@@ -1,0 +1,88 @@
+import random
+import time
+
+WIDTH = 15
+HEIGHT = 10
+MAZE = [[' ' for _ in range(WIDTH)] for _ in range(HEIGHT)]
+START = (0, 0)
+END = (HEIGHT - 1, WIDTH - 1)
+POP_SIZE = 30
+GEN_LENGTH = (WIDTH + HEIGHT) * 2
+MUT_RATE = 0.05
+GENS = 100
+
+for i in range(HEIGHT):
+    for j in range(WIDTH):
+        if random.random() < 0.2 and (i, j) != START and (i, j) != END:
+            MAZE[i][j] = '#'
+
+DIRS = ['U', 'D', 'L', 'R']
+MOVES = {'U': (-1, 0), 'D': (1, 0), 'L': (0, -1), 'R': (0, 1)}
+
+def draw_maze(path=None):
+    for i in range(HEIGHT):
+        row = ''
+        for j in range(WIDTH):
+            if path and (i, j) in path:
+                row += '*'
+            elif (i, j) == START:
+                row += 'S'
+            elif (i, j) == END:
+                row += 'E'
+            else:
+                row += MAZE[i][j]
+        print(row)
+
+def move(pos, direction):
+    di, dj = MOVES[direction]
+    ni, nj = pos[0] + di, pos[1] + dj
+    if 0 <= ni < HEIGHT and 0 <= nj < WIDTH and MAZE[ni][nj] != '#':
+        return (ni, nj)
+    return pos
+
+def fitness(path):
+    pos = START
+    visited = [pos]
+    for d in path:
+        pos = move(pos, d)
+        visited.append(pos)
+        if pos == END:
+            break
+    score = -abs(pos[0] - END[0]) - abs(pos[1] - END[1])
+    if pos == END:
+        score += 100
+    return score, visited
+
+def mutate(path):
+    return [c if random.random() > MUT_RATE else random.choice(DIRS) for c in path]
+
+def crossover(p1, p2):
+    idx = random.randint(0, GEN_LENGTH - 1)
+    return p1[:idx] + p2[idx:]
+
+def evolve():
+    population = [[random.choice(DIRS) for _ in range(GEN_LENGTH)] for _ in range(POP_SIZE)]
+    for gen in range(GENS):
+        graded = sorted([(fitness(p), p) for p in population], key=lambda x: -x[0][0])
+        best_score, best_path = graded[0][0]
+        print(f"Gen {gen+1}: Best Score {best_score}")
+        if best_path == END:
+            print("Goal reached!")
+            draw_maze(graded[0][0][1])
+            return graded[0][0][1]
+        survivors = [x[1] for x in graded[:POP_SIZE // 2]]
+        children = []
+        while len(children) < POP_SIZE:
+            p1, p2 = random.sample(survivors, 2)
+            child = crossover(p1, p2)
+            child = mutate(child)
+            children.append(child)
+        population = children
+    draw_maze(graded[0][0][1])
+    return graded[0][0][1]
+
+if __name__ == "__main__":
+    print("Initial Maze:")
+    draw_maze()
+    print("\nEvolving agents to solve the maze...\n")
+    evolve()
